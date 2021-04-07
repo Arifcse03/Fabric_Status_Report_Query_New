@@ -1,0 +1,559 @@
+<?xml version="1.0" encoding="windows-1252" ?>
+<!DOCTYPE ViewObject SYSTEM "jbo_03_01.dtd">
+<!---->
+<ViewObject
+  xmlns="http://xmlns.oracle.com/bc4j"
+  Name="fabricreport_vo"
+  Version="11.1.1.62.29"
+  InheritPersonalization="true"
+  BindingStyle="OracleName"
+  CustomQuery="true"
+  PageIterMode="Full"
+  UseGlueCode="false">
+  <DesignTime>
+    <Attr Name="_isExpertMode" Value="true"/>
+  </DesignTime>
+  <Properties>
+    <SchemaBasedProperties>
+      <LABEL
+        ResId="model.fabricreport_vo_LABEL"/>
+    </SchemaBasedProperties>
+  </Properties>
+  <Variable
+    Name="p_season"
+    Kind="where"
+    Type="java.lang.String"/>
+  <SQLQuery>
+    <![CDATA[select
+aa.season,
+aa.department,
+aa.brand,
+aa.fit,
+aa.wash,
+aa.mill_name,
+aa.fab,
+aa.fabric_details,
+aa.fabric_booked || ' ' || aa.fabric_booked_uom fabric_booked,
+aa.fab_in_house || ' ' || aa.fab_in_house_uom fab_in_house,
+aa.fab_in_house_date,
+aa.fab_in_house_balance || ' ' || aa.fab_in_house_uom fab_in_house_balance,
+abs(aa.fabric_issue) || ' ' || aa.fabric_issue_uom fabric_issue,
+aa.fabric_issue_date,
+case 
+when aa.fabric_issue is not null 
+then sum(aa.fab_in_house) over (partition by aa.po order by aa.po) - abs(aa.fabric_issue) 
+else null end || ' ' || aa.fabric_issue_uom fabric_balance,
+aa.remarks
+from
+(
+select
+coalesce(a.buyer_id,b.buyer_id) buyer_id,
+coalesce(a.buyer,b.buyer) buyer,
+coalesce(a.season,b.season) season,
+coalesce(a.department,b.department) department,
+coalesce(a.division,b.division) division,
+coalesce(a.style,b.style) style,
+coalesce(a.color,b.color) color,
+coalesce(a.wash,b.wash) wash,
+coalesce(a.mill_name,b.mill_name) mill_name,
+coalesce(a.brand,b.brand) brand,
+coalesce(a.fit,b.fit) fit,
+coalesce(a.fab,b.fab) fab,
+coalesce(a.fabric_details,b.fabric_details) fabric_details,
+coalesce(a.po,b.po) po,
+coalesce(a.fabric_booked,b.fabric_booked) fabric_booked,
+coalesce(a.fabric_booked_uom,b.fabric_booked_uom) fabric_booked_uom,
+coalesce(a.organization_id,b.organization_id) organization_id,
+coalesce(a.inventory_item_id,b.inventory_item_id) inventory_item_id,
+a.fab_in_house,
+a.fab_in_house_uom,
+a.fab_in_house_date,
+a.fab_in_house_balance,
+b.fabric_issue,
+b.fabric_issue_uom,
+b.fabric_issue_date,
+b.remarks
+from
+(
+select
+mmph.buyer_id
+,(select 
+ac.customer_name
+from ar_customers ac
+where ac.customer_id = mmph.buyer_id) buyer
+,mmph.season season
+,mmph.end_user department
+,mmph.division
+,(case 
+when mmph.division='Style No.' then mmph.style_no
+when mmph.division='Style Name' then mmph.style_name
+when mmph.division='Other/BPO No.' then mmph.style_name_new
+else nvl(mmph.style_no,mmph.style_name_new)
+end) style
+,mmpl.colour color
+,mmpl.wash_name wash
+,pv.vendor_name mill_name
+,mmph.brand
+,mmph.fit
+,mmpl.fabric_desc fab
+,mmpl.fabric_content fabric_details
+,pha.segment1 po
+,nvl(sum(pla.quantity),0) --|| ' ' || pla.unit_meas_lookup_code 
+fabric_booked
+,pla.unit_meas_lookup_code fabric_booked_uom
+,msi.organization_id
+,msi.inventory_item_id
+,nvl(sum(rt.primary_quantity),0) --|| ' ' || rt.primary_unit_of_measure 
+fab_in_house
+,rt.primary_unit_of_measure fab_in_house_uom
+,rt.transaction_date fab_in_house_date
+,first_value(nvl(sum(pla.quantity),0)) over(partition by pha.segment1 order by pha.segment1,rt.transaction_date) - sum(nvl(sum(rt.primary_quantity),0)) over(partition by pha.segment1 order by pha.segment1,rt.transaction_date) fab_in_house_balance
+,mmpl.remarks
+from
+mnj_mfg_precosting_h mmph
+,mnj_mfg_precosting_l mmpl
+,org_organization_definitions ood
+,po_headers_all pha
+,po_lines_all pla
+,mtl_system_items msi
+,po_vendors pv
+,rcv_transactions rt
+where 1 = 1
+and mmph.header_id = mmpl.header_id
+and decode(mmph.production_unit,'CAL Unit1',340,'CGL Unit1',341,'GFL Unit1',342) = ood.operating_unit
+and mmph.gm_approval = 'Y'
+and mmph.version_no = (select max (h2.version_no) from mnj_mfg_precosting_h h2 where h2.header_no = mmph.header_no and h2.gm_approval = 'Y')
+and mmph.production_unit in ('CAL Unit1','CGL Unit1','GFL Unit1')
+and pla.vendor_product_num = (case 
+when mmph.division='Style No.' then mmph.style_no
+when mmph.division='Style Name' then mmph.style_name
+when mmph.division='Other/BPO No.' then mmph.style_name_new
+else nvl(mmph.style_no,mmph.style_name_new)
+end) || ' ~ ' || mmph.season
+and pha.po_header_id = pla.po_header_id
+and pla.org_id = ood.operating_unit
+and ood.organization_id = msi.organization_id
+and pla.item_id = msi.inventory_item_id
+and pha.vendor_id = pv.vendor_id
+and pha.po_header_id = rt.po_header_id
+and rt.transaction_type = 'DELIVER'
+and msi.segment1 in ('11','12','21')
+--and (:p_style is null or :p_style = (case 
+--when mmph.division='Style No.' then mmph.style_no
+--when mmph.division='Style Name' then mmph.style_name
+--when mmph.division='Other/BPO No.' then mmph.style_name_new
+--else nvl(mmph.style_no,mmph.style_name_new)
+--end))
+and (:p_season = mmph.season)
+--and (:p_buyer is null or :p_buyer = mmph.buyer_id)
+--and (:p_org_id is null or :p_org_id = decode(mmph.production_unit,'CAL Unit1',340,'CGL Unit1',341,'GFL Unit1',342))
+group by
+mmph.buyer_id
+,mmph.season
+,mmph.end_user
+,mmph.division
+,(case 
+when mmph.division='Style No.' then mmph.style_no
+when mmph.division='Style Name' then mmph.style_name
+when mmph.division='Other/BPO No.' then mmph.style_name_new
+else nvl(mmph.style_no,mmph.style_name_new)
+end)
+,mmpl.colour
+,mmpl.wash_name
+,pv.vendor_name
+,mmph.brand
+,mmph.fit
+,mmpl.fabric_desc
+,mmpl.fabric_content
+,pha.segment1
+,pla.unit_meas_lookup_code
+,rt.transaction_id
+,rt.primary_unit_of_measure
+,rt.transaction_date
+,msi.inventory_item_id
+,msi.organization_id
+,mmpl.remarks
+) a
+full outer join
+(
+select
+mmph.buyer_id
+,(select 
+ac.customer_name
+from ar_customers ac
+where ac.customer_id = mmph.buyer_id) buyer
+,mmph.season season
+,mmph.end_user department
+,mmph.division
+,(case 
+when mmph.division='Style No.' then mmph.style_no
+when mmph.division='Style Name' then mmph.style_name
+when mmph.division='Other/BPO No.' then mmph.style_name_new
+else nvl(mmph.style_no,mmph.style_name_new)
+end) style
+,mmpl.colour color
+,mmpl.wash_name wash
+,pv.vendor_name mill_name
+,mmph.brand
+,mmph.fit
+,mmpl.fabric_desc fab
+,mmpl.fabric_content fabric_details
+,pha.segment1 po
+,nvl(sum(pla.quantity),0) --|| ' ' || pla.unit_meas_lookup_code 
+fabric_booked
+,pla.unit_meas_lookup_code fabric_booked_uom
+,mmt.organization_id
+,mmt.inventory_item_id
+,mmt.primary_quantity fabric_issue
+,mmt.transaction_uom fabric_issue_uom
+,mmt.transaction_date fabric_issue_date
+,mmpl.remarks
+from
+mnj_mfg_precosting_h mmph
+,mnj_mfg_precosting_l mmpl
+,org_organization_definitions ood
+,po_headers_all pha
+,po_lines_all pla
+,mtl_system_items msi
+,po_vendors pv
+,wip_discrete_jobs_v wdj
+,mtl_material_transactions mmt
+where 1 = 1
+and mmph.header_id = mmpl.header_id
+and decode(mmph.production_unit,'CAL Unit1',340,'CGL Unit1',341,'GFL Unit1',342) = ood.operating_unit
+and mmph.gm_approval = 'Y'
+and mmph.version_no = (select max (h2.version_no) from mnj_mfg_precosting_h h2 where h2.header_no = mmph.header_no and h2.gm_approval = 'Y')
+and mmph.production_unit in ('CAL Unit1','CGL Unit1','GFL Unit1')
+and pla.vendor_product_num = (case 
+when mmph.division='Style No.' then mmph.style_no
+when mmph.division='Style Name' then mmph.style_name
+when mmph.division='Other/BPO No.' then mmph.style_name_new
+else nvl(mmph.style_no,mmph.style_name_new)
+end) || ' ~ ' || mmph.season
+and pha.po_header_id = pla.po_header_id
+and pla.org_id = ood.operating_unit
+and ood.organization_id = msi.organization_id
+and pla.item_id = msi.inventory_item_id
+and pha.vendor_id = pv.vendor_id
+and wdj.attribute9 = mmpl.wash_name
+and wdj.attribute8 = mmpl.colour
+and wdj.attribute6 = (case 
+when mmph.division='Style No.' then mmph.style_no
+when mmph.division='Style Name' then mmph.style_name
+when mmph.division='Other/BPO No.' then mmph.style_name_new
+else nvl(mmph.style_no,mmph.style_name_new)
+end)
+and wdj.attribute7 = mmph.season
+and wdj.organization_id = ood.organization_id
+and wdj.wip_entity_id = mmt.transaction_source_id
+and mmt.inventory_item_id = msi.inventory_item_id
+and mmt.organization_id = msi.organization_id
+and wdj.class_code = 'CUT'
+and msi.segment1 in ('11','12','21')
+and mmt.transaction_type_id = 35
+--and (:p_style is null or :p_style = (case 
+--when mmph.division='Style No.' then mmph.style_no
+--when mmph.division='Style Name' then mmph.style_name
+--when mmph.division='Other/BPO No.' then mmph.style_name_new
+--else nvl(mmph.style_no,mmph.style_name_new)
+--end)) -- '570574'
+and ( :p_season = mmph.season)
+--and (:p_buyer is null or :p_buyer = mmph.buyer_id)
+--and (:p_org_id is null or :p_org_id = decode(mmph.production_unit,'CAL Unit1',340,'CGL Unit1',341,'GFL Unit1',342))
+group by
+mmph.buyer_id
+,mmph.season
+,mmph.end_user
+,mmph.division
+,(case 
+when mmph.division='Style No.' then mmph.style_no
+when mmph.division='Style Name' then mmph.style_name
+when mmph.division='Other/BPO No.' then mmph.style_name_new
+else nvl(mmph.style_no,mmph.style_name_new)
+end)
+,mmpl.colour
+,mmpl.wash_name
+,pv.vendor_name
+,mmph.brand
+,mmph.fit
+,mmpl.fabric_desc
+,mmpl.fabric_content
+,pha.segment1
+,pla.unit_meas_lookup_code
+,mmt.organization_id
+,mmt.inventory_item_id
+,mmt.primary_quantity
+,mmt.transaction_uom
+,mmt.transaction_date
+,mmpl.remarks
+) b
+on 1 = 1
+and a.fab_in_house_date = b.fabric_issue_date
+order by a.po,b.po,a.fab_in_house_date
+) aa]]>
+  </SQLQuery>
+  <ViewAttribute
+    Name="Season"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="255"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="SEASON"
+    Expression="SEASON"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="500"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="Department"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="100"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="DEPARTMENT"
+    Expression="DEPARTMENT"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="100"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="Brand"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="100"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="BRAND"
+    Expression="BRAND"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="100"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="Fit"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="100"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="FIT"
+    Expression="FIT"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="100"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="Wash"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="500"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="WASH"
+    Expression="WASH"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="500"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="MillName"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="240"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="MILL_NAME"
+    Expression="MILL_NAME"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="240"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="Fab"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="500"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="FAB"
+    Expression="FAB"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="500"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="FabricDetails"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="250"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="FABRIC_DETAILS"
+    Expression="FABRIC_DETAILS"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="250"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="FabricBooked"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="66"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="FABRIC_BOOKED"
+    Expression="FABRIC_BOOKED"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="66"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="FabInHouse"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="66"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="FAB_IN_HOUSE"
+    Expression="FAB_IN_HOUSE"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="66"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="FabInHouseDate"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Type="oracle.jbo.domain.Date"
+    ColumnType="DATE"
+    AliasName="FAB_IN_HOUSE_DATE"
+    Expression="FAB_IN_HOUSE_DATE"
+    SQLType="DATE">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="7"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="FabInHouseBalance"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="66"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="FAB_IN_HOUSE_BALANCE"
+    Expression="FAB_IN_HOUSE_BALANCE"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="66"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="FabricIssue"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="44"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="FABRIC_ISSUE"
+    Expression="FABRIC_ISSUE"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="44"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="FabricIssueDate"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Type="oracle.jbo.domain.Date"
+    ColumnType="DATE"
+    AliasName="FABRIC_ISSUE_DATE"
+    Expression="FABRIC_ISSUE_DATE"
+    SQLType="DATE">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="7"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="FabricBalance"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="44"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="FABRIC_BALANCE"
+    Expression="FABRIC_BALANCE"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="44"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewAttribute
+    Name="Remarks"
+    IsPersistent="false"
+    PrecisionRule="true"
+    Precision="500"
+    Type="java.lang.String"
+    ColumnType="VARCHAR2"
+    AliasName="REMARKS"
+    Expression="REMARKS"
+    SQLType="VARCHAR">
+    <DesignTime>
+      <Attr Name="_DisplaySize" Value="500"/>
+    </DesignTime>
+  </ViewAttribute>
+  <ViewCriteria
+    Name="fabricreport_voCriteria"
+    ViewObjectName="model.fabricreport_vo"
+    Conjunction="AND">
+    <Properties>
+      <CustomProperties>
+        <Property
+          Name="displayOperators"
+          Value="InAdvancedMode"/>
+        <Property
+          Name="autoExecute"
+          Value="false"/>
+        <Property
+          Name="allowConjunctionOverride"
+          Value="true"/>
+        <Property
+          Name="showInList"
+          Value="true"/>
+        <Property
+          Name="mode"
+          Value="Basic"/>
+      </CustomProperties>
+    </Properties>
+    <ViewCriteriaRow
+      Name="vcrow1"
+      UpperColumns="1">
+      <ViewCriteriaItem
+        Name="Season"
+        ViewAttribute="Season"
+        Operator="="
+        Conjunction="AND"
+        Value=":p_season"
+        IsBindVarValue="true"
+        Required="Required"
+        GenerateIsNullClauseForBindVars="false"
+        ValidateBindVars="true"/>
+    </ViewCriteriaRow>
+  </ViewCriteria>
+  <ResourceBundle>
+    <PropertiesBundle
+      PropertiesFile="model.ModelBundle"/>
+  </ResourceBundle>
+</ViewObject>

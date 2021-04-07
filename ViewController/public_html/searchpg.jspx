@@ -1,0 +1,201 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<jsp:root xmlns:jsp="http://java.sun.com/JSP/Page" version="2.1"
+          xmlns:f="http://java.sun.com/jsf/core"
+          xmlns:h="http://java.sun.com/jsf/html"
+          xmlns:af="http://xmlns.oracle.com/adf/faces/rich">
+  <jsp:directive.page contentType="text/html;charset=UTF-8"/>
+  <f:view>
+    <af:document id="d1">
+      <af:messages id="m1"/>
+      <af:form id="f1"
+               inlineStyle="color:Black; border-style:dotted; border-color:Black; border-width:medium;">
+        <af:panelHeader text=" " id="ph1" styleClass="AFStretchWidth"
+                        inlineStyle="height:800.0px;">
+          <f:facet name="context"/>
+          <f:facet name="menuBar"/>
+          <f:facet name="toolbar"/>
+          <f:facet name="legend">
+            <af:group id="g1">
+              <af:outputText value="Fabric Status Report" id="ot1"
+                             inlineStyle="color:Black; font-size:x-large; font-family:Georgia, 'Times New Roman', times, Serif;"/>
+              <af:statusIndicator id="si1"/>
+            </af:group>
+          </f:facet>
+          <f:facet name="info"/>
+          <af:spacer width="20" height="10" id="s3"/>
+          <af:panelFormLayout id="pfl1" maxColumns="10" rows="1"
+                              inlineStyle="background-color:Scrollbar; border-width:thin; border-style:solid; padding:10px;"
+                              labelWidth="150px" styleClass="AFStretchWidth">
+            <af:inputListOfValues id="buyerId"
+                                  popupTitle="Search and Select: #{bindings.Buyer.hints.label}"
+                                  value="#{bindings.Buyer.inputValue}"
+                                  label="#{bindings.Buyer.hints.label}"
+                                  model="#{bindings.Buyer.listOfValuesModel}"
+                                  required="#{bindings.Buyer.hints.mandatory}"
+                                  columns="#{bindings.Buyer.hints.displayWidth}"
+                                  shortDesc="#{bindings.Buyer.hints.tooltip}"
+                                  autoSubmit="true">
+              <f:validator binding="#{bindings.Buyer.validator}"/>
+              <af:autoSuggestBehavior suggestedItems="#{bindings.Buyer.suggestedItems}"/>
+            </af:inputListOfValues>
+            <af:inputListOfValues id="seasonId"
+                                  popupTitle="Search and Select: #{bindings.Season.hints.label}"
+                                  value="#{bindings.Season.inputValue}"
+                                  label="#{bindings.Season.hints.label}"
+                                  model="#{bindings.Season.listOfValuesModel}"
+                                  required="#{bindings.Season.hints.mandatory}"
+                                  columns="#{bindings.Season.hints.displayWidth}"
+                                  shortDesc="#{bindings.Season.hints.tooltip}"
+                                  partialTriggers="buyerId">
+              <f:validator binding="#{bindings.Season.validator}"/>
+              <af:autoSuggestBehavior suggestedItems="#{bindings.Season.suggestedItems}"/>
+            </af:inputListOfValues>
+            <af:commandButton text="Search" id="cb1"
+                              action="#{backinbean.action_call}"
+                              inlineStyle="border-color:Blue; border-style:solid; background-color:Silver; color:Black;"
+                              partialSubmit="true"/>
+            <af:commandButton text="Excel Export" id="cb2"
+                              inlineStyle="border-color:Blue; border-style:solid; background-color:Silver; color:Black;">
+              <af:exportCollectionActionListener exportedId="pc1:t1"
+                                                 type="excelHTML"
+                                                 title="Fabric Status"
+                                                 filename="Fabric_status_season:_#{bindings.Season.inputValue}.xls"/>
+            </af:commandButton>
+            <af:inputText value="#{bindings.BuyerId.inputValue}"
+                          label="#{bindings.BuyerId.hints.label}"
+                          required="#{bindings.BuyerId.hints.mandatory}"
+                          columns="#{bindings.BuyerId.hints.displayWidth}"
+                          maximumLength="#{bindings.BuyerId.hints.precision}"
+                          shortDesc="#{bindings.BuyerId.hints.tooltip}" id="it1"
+                          partialTriggers="buyerId" visible="false">
+              <f:validator binding="#{bindings.BuyerId.validator}"/>
+            </af:inputText>
+          </af:panelFormLayout>
+          <af:spacer width="10" height="10" id="s1"/>
+          <af:panelCollection id="pc1"
+                              inlineStyle="width:auto; height:500.0px;">
+            <f:facet name="menus"/>
+            <f:facet name="toolbar"/>
+            <f:facet name="statusbar"/>
+            <af:table value="#{bindings.fabricreport_vo1.collectionModel}"
+                      var="row" rows="#{bindings.fabricreport_vo1.rangeSize}"
+                      emptyText="#{bindings.fabricreport_vo1.viewable ? 'No data to display.' : 'Access Denied.'}"
+                      fetchSize="#{bindings.fabricreport_vo1.rangeSize}"
+                      rowBandingInterval="0"
+                      filterModel="#{bindings.fabricreport_vo1Query.queryDescriptor}"
+                      queryListener="#{bindings.fabricreport_vo1Query.processQuery}"
+                      filterVisible="true" varStatus="vs"
+                      selectedRowKeys="#{bindings.fabricreport_vo1.collectionModel.selectedRow}"
+                      selectionListener="#{bindings.fabricreport_vo1.collectionModel.makeCurrent}"
+                      rowSelection="single" id="t1"
+                      binding="#{backinbean.mainTable}">
+              <af:column sortProperty="Season" filterable="true" sortable="true"
+                         headerText="#{bindings.fabricreport_vo1.hints.Season.label}"
+                         id="c3" align="center">
+                <af:outputText value="#{row.Season}" id="ot2"/>
+              </af:column>
+              <af:column sortProperty="Department" filterable="true"
+                         sortable="true"
+                         headerText="#{bindings.fabricreport_vo1.hints.Department.label}"
+                         id="c14" align="center" width="50">
+                <af:outputText value="#{row.Department}" id="ot15"/>
+              </af:column>
+              <af:column sortProperty="Brand" filterable="true" sortable="true"
+                         headerText="#{bindings.fabricreport_vo1.hints.Brand.label}"
+                         id="c13" align="center">
+                <af:outputText value="#{row.Brand}" id="ot10"/>
+              </af:column>
+              <af:column sortProperty="Fit" filterable="true" sortable="true"
+                         headerText="#{bindings.fabricreport_vo1.hints.Fit.label}"
+                         id="c12" align="center" width="60">
+                <af:outputText value="#{row.Fit}" id="ot8"/>
+              </af:column>
+              <af:column sortProperty="Wash" filterable="true" sortable="true"
+                         headerText="#{bindings.fabricreport_vo1.hints.Wash.label}"
+                         id="c16" align="center">
+                <af:outputText value="#{row.Wash}" id="ot14"/>
+              </af:column>
+              <af:column sortProperty="MillName" filterable="true"
+                         sortable="true"
+                         headerText="Mill Name"
+                         id="c8" align="center">
+                <af:outputText value="#{row.MillName}" id="ot3"/>
+              </af:column>
+              <af:column sortProperty="Fab" filterable="true" sortable="true"
+                         headerText="#{bindings.fabricreport_vo1.hints.Fab.label}"
+                         id="c6" align="center">
+                <af:outputText value="#{row.Fab}" id="ot12"/>
+              </af:column>
+              <af:column sortProperty="FabricDetails" filterable="true"
+                         sortable="true"
+                         headerText="Fabric Details"
+                         id="c10" align="center">
+                <af:outputText value="#{row.FabricDetails}" id="ot17"/>
+              </af:column>
+              <af:column sortProperty="FabricBooked" filterable="true"
+                         sortable="true"
+                         headerText="Fabric Booked"
+                         id="c15" align="center" width="80">
+                <af:outputText value="#{row.FabricBooked}" id="ot11"/>
+              </af:column>
+              <af:column sortProperty="FabInHouse" filterable="true"
+                         sortable="true"
+                         headerText="Fab In House"
+                         id="c9" align="center" width="80">
+                <af:outputText value="#{row.FabInHouse}" id="ot13"/>
+              </af:column>
+              <af:column sortProperty="FabInHouseDate" filterable="true"
+                         sortable="true"
+                         headerText="Fab In House Date"
+                         id="c11" align="center" width="80">
+                <f:facet name="filter">
+                  <af:inputDate value="#{vs.filterCriteria.FabInHouseDate}"
+                                id="id2"/>
+                </f:facet>
+                <af:outputText value="#{row.FabInHouseDate}" id="ot6">
+                  <af:convertDateTime pattern="#{bindings.fabricreport_vo1.hints.FabInHouseDate.format}"/>
+                </af:outputText>
+              </af:column>
+              <af:column sortProperty="FabInHouseBalance" filterable="true"
+                         sortable="true"
+                         headerText="Fab In House Balance"
+                         id="c4" align="center" width="80">
+                <af:outputText value="#{row.FabInHouseBalance}" id="ot5"/>
+              </af:column>
+              <af:column sortProperty="FabricIssue" filterable="true"
+                         sortable="true"
+                         headerText="Fabric Issue"
+                         id="c5" align="center" width="80">
+                <af:outputText value="#{row.FabricIssue}" id="ot16"/>
+              </af:column>
+              <af:column sortProperty="FabricIssueDate" filterable="true"
+                         sortable="true"
+                         headerText="Fabric Issue Date"
+                         id="c1" align="center">
+                <f:facet name="filter">
+                  <af:inputDate value="#{vs.filterCriteria.FabricIssueDate}"
+                                id="id1"/>
+                </f:facet>
+                <af:outputText value="#{row.FabricIssueDate}" id="ot7">
+                  <af:convertDateTime pattern="#{bindings.fabricreport_vo1.hints.FabricIssueDate.format}"/>
+                </af:outputText>
+              </af:column>
+              <af:column sortProperty="FabricBalance" filterable="true"
+                         sortable="true"
+                         headerText="Fabric Balance"
+                         id="c7" align="center">
+                <af:outputText value="#{row.FabricBalance}" id="ot9"/>
+              </af:column>
+              <af:column sortProperty="Remarks" filterable="true"
+                         sortable="true"
+                         headerText="#{bindings.fabricreport_vo1.hints.Remarks.label}"
+                         id="c2" align="center">
+                <af:outputText value="#{row.Remarks}" id="ot4"/>
+              </af:column>
+            </af:table>
+          </af:panelCollection>
+        </af:panelHeader>
+      </af:form>
+    </af:document>
+  </f:view>
+</jsp:root>
